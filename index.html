@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hangman Game</title>
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #00bcd4, #8bc34a);
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #fff;
+    }
+
+    .game-container {
+      text-align: center;
+      max-width: 500px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+
+    #word {
+      font-size: 2rem;
+      letter-spacing: 10px;
+      margin-bottom: 10px;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      margin-right: 10px;
+    }
+
+    button {
+      background-color: #673ab7;
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #512da8;
+    }
+
+    #hangman-figure {
+      width: 200px;
+      height: 300px;
+    }
+
+    #message {
+      font-size: 1.2rem;
+      margin-top: 10px;
+      height: 30px;
+    }
+
+    #guessed {
+      margin-top: 10px;
+    }
+
+    canvas {
+      background-color: #fff;
+      border-radius: 10px;
+    }
+   .popup-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.popup-box {
+  background-color: #5f27cd;
+  color: white;
+  padding: 30px 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  animation: popupFade 0.4s ease;
+}
+
+.popup-emoji {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.popup-title {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.popup-message {
+  font-size: 18px;
+  margin-top: 5px;
+  margin-bottom: 20px;
+}
+
+.popup-button {
+  background-color: #44bd32;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 30px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.popup-button:hover {
+  background-color: #2ecc71;
+}
+
+@keyframes popupFade {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+  </style>
+</head>
+<body>
+
+  <div class="game-container">
+    <h1>Hangman Game</h1>
+    <div id="word">_ _ _ _ _</div>
+    <p>Lives: <span id="lives">6</span></p>
+    <p>Guess the word!</p>
+    <input type="text" id="guess" maxlength="1" placeholder="Enter a letter" />
+    <button onclick="makeGuess()">Guess</button>
+    <div id="guessed">Guessed: <span id="guessed-letters"></span></div>
+    <p id="message"></p>
+  </div>
+
+  <canvas id="hangman-figure" width="200" height="300"></canvas>
+
+  <script>
+    const words = [
+  "water", "phone", "laptop", "coffee", "mouse", "keyboard", "mirror", "shirt", "money", "pencil",
+  "window", "table", "chair", "school", "market", "remote", "light", "bag", "glass", "paper",
+  "sleep", "train", "bottle", "clock", "sugar", "salt", "soap", "broom", "fan", "socks",
+  "book", "pen", "door", "mobile", "charger", "food", "tea", "bus", "bike", "jeans",
+  "cable", "bucket", "towel", "room", "bed", "mirror", "cooler", "pillow", "plate", "shoes"
+];
+
+
+    let word = words[Math.floor(Math.random() * words.length)];
+    let display = Array(word.length).fill('_');
+    let lives = 6;
+    let guessedLetters = [];
+
+    const wordDisplay = document.getElementById('word');
+    const livesDisplay = document.getElementById('lives');
+    const guessedDisplay = document.getElementById('guessed-letters');
+    const message = document.getElementById('message');
+    const canvas = document.getElementById('hangman-figure');
+    const ctx = canvas.getContext('2d');
+
+    function drawHangman(stage) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gallows
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#000";
+      ctx.beginPath();
+      ctx.moveTo(150, 280);
+      ctx.lineTo(50, 280);
+      ctx.moveTo(100, 280);
+      ctx.lineTo(100, 50);
+      ctx.lineTo(160, 50);
+      ctx.lineTo(160, 80);
+      ctx.stroke();
+
+      // Body parts
+      if (stage < 6) {
+        // Head
+        ctx.beginPath();
+        ctx.arc(160, 100, 20, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (stage < 5) {
+        // Body
+        ctx.beginPath();
+        ctx.moveTo(160, 120);
+        ctx.lineTo(160, 180);
+        ctx.stroke();
+      }
+      if (stage < 4) {
+        // Right Arm
+        ctx.beginPath();
+        ctx.moveTo(160, 140);
+        ctx.lineTo(190, 160);
+        ctx.stroke();
+      }
+      if (stage < 3) {
+        // Left Arm
+        ctx.beginPath();
+        ctx.moveTo(160, 140);
+        ctx.lineTo(130, 160);
+        ctx.stroke();
+      }
+      if (stage < 2) {
+        // Right Leg
+        ctx.beginPath();
+        ctx.moveTo(160, 180);
+        ctx.lineTo(190, 220);
+        ctx.stroke();
+      }
+      if (stage < 1) {
+        // Left Leg
+        ctx.beginPath();
+        ctx.moveTo(160, 180);
+        ctx.lineTo(130, 220);
+        ctx.stroke();
+      }
+    }
+
+    function resetGame() {
+      word = words[Math.floor(Math.random() * words.length)];
+      display = Array(word.length).fill('_');
+      lives = 6;
+      guessedLetters = [];
+      wordDisplay.innerText = display.join(' ');
+      livesDisplay.innerText = lives;
+      guessedDisplay.innerText = '';
+      message.innerText = '';
+      drawHangman(lives);
+    }
+
+   function showPopup(message, type) {
+  // Remove existing popup if any
+  const oldPopup = document.getElementById("custom-popup");
+  if (oldPopup) oldPopup.remove();
+
+  const popup = document.createElement("div");
+  popup.id = "custom-popup";
+  popup.className = "popup-container";
+
+  // Emoji and message type
+  const emoji = type === "win" ? "🎉" : "💀";
+  const title = type === "win" ? "YOU WIN!" : "YOU LOST!";
+  const bgColor = type === "win" ? "#5f27cd" : "#e84118";
+
+  popup.innerHTML = `
+    <div class="popup-box" style="background-color: ${bgColor};">
+      <div class="popup-emoji">${emoji}</div>
+      <div class="popup-title">${title}</div>
+      <div class="popup-message">${message}</div>
+      <button class="popup-button" onclick="document.getElementById('custom-popup').remove()">OK</button>
+    </div>
+  `;
+
+  document.body.appendChild(popup);
+}
+
+    function makeGuess() {
+      const guessInput = document.getElementById('guess');
+      const guess = guessInput.value.toLowerCase();
+      guessInput.value = '';
+
+      if (!guess.match(/[a-z]/) || guess.length !== 1) {
+        message.innerText = "Enter a valid single letter.";
+        return;
+      }
+
+      if (guessedLetters.includes(guess)) {
+        message.innerText = "Already guessed that letter.";
+        return;
+      }
+
+      guessedLetters.push(guess);
+      guessedDisplay.innerText = guessedLetters.join(' ').toUpperCase();
+
+      if (word.includes(guess)) {
+        for (let i = 0; i < word.length; i++) {
+          if (word[i] === guess) {
+            display[i] = guess;
+          }
+        }
+        wordDisplay.innerText = display.join(' ');
+        message.innerText = "Good guess!";
+      } else {
+        lives--;
+        livesDisplay.innerText = lives;
+        message.innerText = "Wrong guess!";
+      }
+
+      drawHangman(lives);
+if (!display.includes('_')) {
+  showPopup("🎉 The word was: " + word.toUpperCase(), "win");
+
+  // Auto close popup and reset game after 5 seconds
+  setTimeout(() => {
+    const popup = document.getElementById('custom-popup');
+    if (popup) popup.remove();
+    resetGame();
+  }, 5000);
+}  
+else if (lives === 0) {
+  showPopup("💀 The word was: " + word.toUpperCase(), "lose");
+
+  // Auto close popup and reset game after 2 seconds
+  setTimeout(() => {
+    const popup = document.getElementById('custom-popup');
+    if (popup) popup.remove();
+    resetGame();
+  }, 2000);
+}
+
+
+
+    }
+
+    // Initial drawing
+    drawHangman(lives);
+  </script>
+</body>
+</html>
